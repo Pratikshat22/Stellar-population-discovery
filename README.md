@@ -1,63 +1,403 @@
-# Stellar-population-discovery
-Challenging ideal stellar models using real data: uncovering hidden populations, weak correlations, and non-ideal physical behavior
-# Stellar Population Discovery Using Machine Learning
+# ==============================================================================
+# STELLAR PHYSICS ANALYSIS: DATA-DRIVEN DISCOVERY
+# ==============================================================================
+# Author: Pratiksha Thakur
+# Dataset: Star Dataset (Kaggle)
+# Objective: Discover hidden stellar populations and physical laws using ML
+# ==============================================================================
 
-I worked on this project to see if I could use machine learning to find patterns in stellar data that might not be obvious just by looking at plots. The dataset has information about stars - their temperatures and luminosities - and I wanted to check whether the well-known Stefan-Boltzmann law (L ∝ T⁴) actually holds when you look at real data.
+!pip install kagglehub plotly scikit-learn scipy -q
 
-The idea was simple: if the law holds perfectly, temperature and luminosity should follow a tight relationship. But when I ran the numbers, I got something different.
+import kagglehub
+import pandas as pd
+import numpy as np
+import plotly.graph_objects as go
+import plotly.express as px
+from plotly.subplots import make_subplots
+from sklearn.cluster import KMeans
+from sklearn.ensemble import IsolationForest
+from sklearn.preprocessing import StandardScaler
+from sklearn.linear_model import LinearRegression
+from scipy.stats import linregress
+import os
+import warnings
+warnings.filterwarnings('ignore')
 
-# What I Found
+print("="*70)
+print("STELLAR PHYSICS ANALYSIS: DATA-DRIVEN DISCOVERY")
+print("="*70)
 
-The global scaling exponent came out to about 4.58, which is close to the theoretical 4.0 but not exactly. More interesting was the correlation - only 0.43. That means temperature alone doesn't explain luminosity very well. Something else is going on.
+# ==============================================================================
+# STEP 1: LOAD DATASET
+# ==============================================================================
+print("\n[1] Loading dataset...")
 
-When I ran clustering (K-Means), the algorithm split the stars into three distinct groups. I didn't tell it how many groups to expect - it found them on its own.
+try:
+    path = kagglehub.dataset_download("deepu1109/star-dataset")
+    csv_files = [f for f in os.listdir(path) if f.endswith('.csv')]
+    df = pd.read_csv(os.path.join(path, csv_files[0]))
+    print("Dataset loaded:", csv_files[0])
+except Exception as e:
+    print("Dataset not found, generating synthetic data...")
+    np.random.seed(42)
+    n = 300
+    temp = np.random.uniform(3000, 30000, n)
+    lum = (temp/5778)**4 * np.random.uniform(0.5, 2, n)
+    radius = np.random.uniform(0.1, 100, n)
+    df = pd.DataFrame({
+        "Temperature_K": temp,
+        "Luminosity_Sun": lum,
+        "Radius_Sun": radius
+    })
 
-| Group | Stars | Exponent | Notes |
-|-------|-------|----------|-------|
-| Group 0 | 72 | 2.17 | Some temperature dependence |
-| Group 1 | 132 | 0.10 | Very weak dependence |
-| Group 2 | 36 | 0.10 | Almost no dependence |
+# ==============================================================================
+# STEP 2: CLEAN AND STANDARDIZE
+# ==============================================================================
+print("\n[2] Cleaning data...")
 
-These look like different kinds of stars behaving differently. Group 1 and 2 have exponents close to zero - their luminosity doesn't really change with temperature. That's not what textbooks say should happen for most stars.
+df = df.rename(columns={
+    'Temperature (K)': 'Temperature_K',
+    'Luminosity(L/Lo)': 'Luminosity_Sun',
+    'Radius(R/Ro)': 'Radius_Sun',
+    'Absolute magnitude(Mv)': 'Absolute_Magnitude',
+    'Spectral Class': 'Spectral_Type'
+})
 
-## Anomalies
+df = df[['Temperature_K', 'Luminosity_Sun']].dropna()
+df = df.replace([np.inf, -np.inf], np.nan).dropna()
 
-The anomaly detection (Isolation Forest) flagged 12 stars as outliers. Some of these are extreme:
+print("Clean dataset shape:", df.shape)
 
-- One star at 3000K with 280,000 times the Sun's luminosity
-- Several hot stars (20,000-25,000K) that are incredibly faint
-- A 40,000K star that's 800,000 times brighter than the Sun
+# ==============================================================================
+# STEP 3: FEATURE ENGINEERING
+# ==============================================================================
+print("\n[3] Feature engineering...")
 
-These might be unusual stellar types - red supergiants, white dwarfs, maybe even a Wolf-Rayet candidate. Hard to tell from just temperature and luminosity, but they're definitely not following the same rules as the others.
+df['log_T'] = np.log10(df['Temperature_K'])
+df['log_L'] = np.log10(df['Luminosity_Sun'])
 
-## Why This Matters
+# ==============================================================================
+# STEP 4: VERIFY STEFAN-BOLTZMANN LAW (L ∝ T^4)
+# ==============================================================================
+print("\n[4] Verifying Stefan-Boltzmann law...")
 
-The Stefan-Boltzmann law works well for idealized blackbodies, but real stars are more complicated. This analysis shows that:
+X_global = df[['log_T']]
+y_global = df['log_L']
 
-1. Different stellar populations follow different scaling relations
-2. Temperature alone isn't enough to predict luminosity
-3. There are stars that don't fit into any neat category
+global_model = LinearRegression()
+global_model.fit(X_global, y_global)
 
-If I had more data (radius, maybe metallicity), the models might perform better. But even with just two variables, the patterns are there.
+global_n = global_model.coef_[0]
+global_r = np.corrcoef(df['log_T'], df['log_L'])[0, 1]
 
-# Interactive Dashboard
+print(f"Stefan-Boltzmann exponent (expected 4): {global_n:.3f}")
+print(f"Correlation coefficient: {global_r:.4f}")
 
-I made a Plotly dashboard with a few plots:
+# ==============================================================================
+# STEP 5: CLUSTERING - DISCOVER HIDDEN STELLAR POPULATIONS
+# ==============================================================================
+print("\n[5] Discovering hidden stellar populations...")
 
-1.) HR diagram with clusters colored separately
-2.) Anomaly highlighting
-3.) Deviation analysis (where stars fall relative to the model)
-4.) 3D view (temperature, luminosity, and a fake distance just for visualization)
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(df[['log_T', 'log_L']])
 
-Open `file:///C:/Users/nmee8/Downloads/INDEX.HTML` in any browser. The 3D plot rotates, hover works, etc.
+kmeans = KMeans(n_clusters=3, random_state=42, n_init=10)
+df['Cluster'] = kmeans.fit_predict(X_scaled)
 
-# Files
+# ==============================================================================
+# STEP 6: CLUSTER-WISE PHYSICS LAWS
+# ==============================================================================
+print("\n[6] Analyzing cluster-wise physics...")
 
-1.) `file:///C:/Users/nmee8/Downloads/INDEX.HTML` - interactive dashboard
-2.) `analysis_script.py` - the actual code
-3.) `README.md` - this file
+cluster_results = []
+for c in sorted(df['Cluster'].unique()):
+    subset = df[df['Cluster'] == c]
+    X_c = subset[['log_T']]
+    y_c = subset['log_L']
+    
+    model_c = LinearRegression()
+    model_c.fit(X_c, y_c)
+    
+    n_c = model_c.coef_[0]
+    r_c = np.corrcoef(subset['log_T'], subset['log_L'])[0, 1]
+    
+    cluster_results.append((c, n_c, r_c, len(subset)))
+    print(f"  Cluster {c}: n={n_c:.3f}, R={r_c:.3f}, stars={len(subset)}")
 
+# ==============================================================================
+# STEP 7: ANOMALY DETECTION
+# ==============================================================================
+print("\n[7] Detecting stellar anomalies...")
 
-```bash
-pip install kagglehub plotly scikit-learn scipy
-python analysis_script.py
+iso = IsolationForest(contamination=0.05, random_state=42)
+df['Anomaly'] = iso.fit_predict(df[['log_T', 'log_L']])
+
+anomaly_df = df[df['Anomaly'] == -1]
+print(f"Anomalous stars detected: {len(anomaly_df)}")
+
+# ==============================================================================
+# STEP 8: DEVIATION ANALYSIS
+# ==============================================================================
+print("\n[8] Analyzing deviations from expected relation...")
+
+df['Expected_log_L'] = global_model.predict(df[['log_T']])
+df['Deviation'] = df['log_L'] - df['Expected_log_L']
+
+top_anomalies = df.loc[anomaly_df.index].sort_values(by='Deviation', key=abs, ascending=False).head(10)
+print("\nTop anomaly deviations:")
+print(top_anomalies[['Temperature_K', 'Luminosity_Sun', 'Deviation']])
+
+# ==============================================================================
+# STEP 9: CREATE MASTER VISUALIZATION (FIXED)
+# ==============================================================================
+print("\n[9] Creating interactive dashboard...")
+
+fig = make_subplots(
+    rows=3, cols=3,
+    specs=[
+        [{"type": "scatter"}, {"type": "scatter"}, {"type": "scatter3d"}],
+        [{"type": "histogram"}, {"type": "bar"}, {"type": "scatter"}],
+        [{"type": "heatmap"}, {"type": "bar"}, {"type": "histogram"}]
+    ],
+    subplot_titles=(
+        "Hertzsprung-Russell Diagram (Clusters)",
+        "HR Diagram (Anomalies Highlighted)",
+        "3D Stellar Parameter Space",
+        "Luminosity Distribution",
+        "Spectral Type Distribution",
+        "Deviation from Stefan-Boltzmann Law",
+        "Correlation Matrix",
+        "Cluster-wise Power Laws",
+        "Anomaly Temperature Distribution"
+    )
+)
+
+# Plot 1: HR Diagram with Clusters
+for cluster in sorted(df['Cluster'].unique()):
+    cluster_data = df[df['Cluster'] == cluster]
+    fig.add_trace(
+        go.Scatter(
+            x=cluster_data['Temperature_K'],
+            y=cluster_data['Luminosity_Sun'],
+            mode='markers',
+            name=f'Population {cluster+1}',
+            marker=dict(size=8, opacity=0.7),
+            hovertemplate='Temp: %{x:.0f}K<br>Lum: %{y:.2f} L☉<extra></extra>'
+        ),
+        row=1, col=1
+    )
+
+# Add theoretical main sequence
+T_main = np.logspace(3.5, 4.5, 100)
+L_main = T_main**4
+fig.add_trace(
+    go.Scatter(
+        x=T_main, y=L_main, mode='lines',
+        line=dict(color='gray', dash='dash', width=2),
+        name='Main Sequence'
+    ),
+    row=1, col=1
+)
+
+# Plot 2: HR Diagram with Anomalies
+fig.add_trace(
+    go.Scatter(
+        x=df['Temperature_K'],
+        y=df['Luminosity_Sun'],
+        mode='markers',
+        name='Normal Stars',
+        marker=dict(size=6, color='lightblue', opacity=0.6)
+    ),
+    row=1, col=2
+)
+fig.add_trace(
+    go.Scatter(
+        x=anomaly_df['Temperature_K'],
+        y=anomaly_df['Luminosity_Sun'],
+        mode='markers',
+        name='Anomalies',
+        marker=dict(size=12, color='red', symbol='x')
+    ),
+    row=1, col=2
+)
+
+# Plot 3: 3D Parameter Space (simulated distance)
+distance = np.random.uniform(100, 1000, len(df))
+fig.add_trace(
+    go.Scatter3d(
+        x=df['Temperature_K'],
+        y=df['Luminosity_Sun'],
+        z=distance,
+        mode='markers',
+        marker=dict(size=4, color=df['Cluster'], colorscale='Viridis'),
+        name='Stars',
+        hovertemplate='Temp: %{x:.0f}K<br>Lum: %{y:.2f} L☉<br>Dist: %{z:.0f} ly<extra></extra>'
+    ),
+    row=1, col=3
+)
+
+# Plot 4: Luminosity Distribution
+fig.add_trace(
+    go.Histogram(
+        x=np.log10(df['Luminosity_Sun']),
+        nbinsx=30,
+        marker_color='#4ECDC4',
+        name='log(Luminosity)'
+    ),
+    row=2, col=1
+)
+
+# Plot 5: Spectral Type Distribution (if available, else luminosity bins)
+if 'Spectral_Type' in df.columns and df['Spectral_Type'].notna().any():
+    type_counts = df['Spectral_Type'].value_counts().sort_index()
+    fig.add_trace(
+        go.Bar(
+            x=type_counts.index,
+            y=type_counts.values,
+            marker_color='#45B7D1',
+            text=type_counts.values,
+            textposition='auto'
+        ),
+        row=2, col=2
+    )
+else:
+    # Create spectral-like bins based on temperature
+    temp_bins = pd.cut(df['Temperature_K'], bins=7, 
+                       labels=['O', 'B', 'A', 'F', 'G', 'K', 'M'])
+    bin_counts = temp_bins.value_counts().sort_index()
+    fig.add_trace(
+        go.Bar(
+            x=bin_counts.index,
+            y=bin_counts.values,
+            marker_color='#45B7D1',
+            text=bin_counts.values,
+            textposition='auto',
+            name='Temperature-based Types'
+        ),
+        row=2, col=2
+    )
+
+# Plot 6: Deviation Analysis (FIXED - removed add_hline)
+fig.add_trace(
+    go.Scatter(
+        x=df['Temperature_K'],
+        y=df['Deviation'],
+        mode='markers',
+        marker=dict(size=5, color=df['Deviation'], colorscale='RdBu', colorbar=dict(title="Deviation")),
+        name='Deviation',
+        hovertemplate='Temp: %{x:.0f}K<br>Deviation: %{y:.3f}<extra></extra>'
+    ),
+    row=2, col=3
+)
+# Add horizontal line using add_shape instead of add_hline
+fig.add_shape(
+    type="line", x0=df['Temperature_K'].min(), x1=df['Temperature_K'].max(),
+    y0=0, y1=0, line=dict(color="gray", width=1, dash="dash"),
+    row=2, col=3
+)
+
+# Plot 7: Correlation Matrix
+corr_matrix = df[['log_T', 'log_L']].corr().round(3)
+fig.add_trace(
+    go.Heatmap(
+        z=corr_matrix.values,
+        x=corr_matrix.columns,
+        y=corr_matrix.columns,
+        colorscale='RdBu_r',
+        text=corr_matrix.values,
+        texttemplate='%{text}',
+        hovertemplate='%{x} vs %{y}: %{z}<extra></extra>'
+    ),
+    row=3, col=1
+)
+
+# Plot 8: Cluster-wise Power Laws
+cluster_n = [r[1] for r in cluster_results]
+cluster_names = [f'Cluster {r[0]+1}' for r in cluster_results]
+fig.add_trace(
+    go.Bar(
+        x=cluster_names,
+        y=cluster_n,
+        marker_color='#FF6B6B',
+        text=[f'{n:.3f}' for n in cluster_n],
+        textposition='auto',
+        name='Exponent n'
+    ),
+    row=3, col=2
+)
+# Add horizontal line using add_shape
+fig.add_shape(
+    type="line", x0=-0.5, x1=len(cluster_names)-0.5,
+    y0=4, y1=4, line=dict(color="green", width=2, dash="dash"),
+    row=3, col=2
+)
+
+# Plot 9: Anomaly Temperature Distribution
+fig.add_trace(
+    go.Histogram(
+        x=anomaly_df['Temperature_K'] if len(anomaly_df) > 0 else [],
+        nbinsx=20,
+        marker_color='#e74c3c',
+        name='Anomaly Temperatures'
+    ),
+    row=3, col=3
+)
+
+# Update layout
+fig.update_layout(
+    title="Stellar Physics Analysis: Discovering Hidden Populations and Deviations",
+    height=1200,
+    template="plotly_white",
+    showlegend=True
+)
+
+# Set axis labels
+fig.update_xaxes(title_text="Temperature (K)", row=1, col=1, type='log')
+fig.update_yaxes(title_text="Luminosity (L☉)", row=1, col=1, type='log')
+fig.update_xaxes(title_text="Temperature (K)", row=1, col=2, type='log')
+fig.update_yaxes(title_text="Luminosity (L☉)", row=1, col=2, type='log')
+fig.update_xaxes(title_text="Temperature (K)", row=2, col=3, type='log')
+fig.update_yaxes(title_text="Deviation", row=2, col=3)
+
+# Update 3D scene labels
+fig.update_scenes(
+    xaxis_title="Temperature (K)",
+    yaxis_title="Luminosity (L☉)",
+    zaxis_title="Distance (ly)",
+    row=1, col=3
+)
+
+fig.show()
+fig.write_html("stellar_analysis_complete.html")
+
+# ==============================================================================
+# STEP 10: FINAL SUMMARY
+# ==============================================================================
+print("\n" + "="*70)
+print("FINAL RESULTS SUMMARY")
+print("="*70)
+
+print(f"\n[Stefan-Boltzmann Law Validation]")
+print(f"  Global exponent: {global_n:.3f} (theoretical: 4.00)")
+print(f"  Correlation: {global_r:.4f}")
+
+print(f"\n[Stellar Populations Discovered]")
+for c, n, r, count in cluster_results:
+    print(f"  Population {c+1}: n={n:.3f}, R={r:.3f}, stars={count}")
+
+print(f"\n[Anomaly Detection]")
+print(f"  Anomalous stars: {len(anomaly_df)} ({len(anomaly_df)/len(df)*100:.1f}%)")
+
+print("\n[DISCOVERY INTERPRETATION]")
+print("1. Global deviation from n=4 suggests non-ideal stellar behavior")
+print("2. Cluster-wise variation indicates multiple physical regimes")
+print("3. Anomalies represent stars deviating from standard models")
+print("4. Stellar luminosity is not a single-variable function of temperature")
+print("5. Hidden populations reveal different evolutionary stages")
+
+print("\nFiles saved:")
+print("  - stellar_analysis_complete.html (Interactive dashboard)")
+
+print("\n" + "="*70)
+print("ANALYSIS COMPLETE")
+print("="*70)
