@@ -30,7 +30,7 @@ The anomaly detection (Isolation Forest) flagged 12 stars as outliers. Some of t
 
 These might be unusual stellar types - red supergiants, white dwarfs, maybe even a Wolf-Rayet candidate. Hard to tell from just temperature and luminosity, but they're definitely not following the same rules as the others.
 
-## Why This Matters
+# Why This Matters
 
 The Stefan-Boltzmann law works well for idealized blackbodies, but real stars are more complicated. This analysis shows that:
 
@@ -45,8 +45,11 @@ If I had more data (radius, maybe metallicity), the models might perform better.
 I made a Plotly dashboard with a few plots:
 
 1.) HR diagram with clusters colored separately
+
 2.) Anomaly highlighting
+
 3.) Deviation analysis (where stars fall relative to the model)
+
 4.) 3D view (temperature, luminosity, and a fake distance just for visualization)
 
 Open `file:///C:/Users/nmee8/Downloads/INDEX.HTML` in any browser. The 3D plot rotates, hover works, etc.
