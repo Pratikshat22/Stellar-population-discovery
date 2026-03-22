@@ -1,12 +1,10 @@
-# Stellar-population-discovery
-Challenging ideal stellar models using real data: uncovering hidden populations, weak correlations, and non-ideal physical behavior
 # Stellar Population Discovery Using Machine Learning
 
 I worked on this project to see if I could use machine learning to find patterns in stellar data that might not be obvious just by looking at plots. The dataset has information about stars - their temperatures and luminosities - and I wanted to check whether the well-known Stefan-Boltzmann law (L ∝ T⁴) actually holds when you look at real data.
 
 The idea was simple: if the law holds perfectly, temperature and luminosity should follow a tight relationship. But when I ran the numbers, I got something different.
 
-# What I Found
+## What I Found
 
 The global scaling exponent came out to about 4.58, which is close to the theoretical 4.0 but not exactly. More interesting was the correlation - only 0.43. That means temperature alone doesn't explain luminosity very well. Something else is going on.
 
@@ -30,7 +28,7 @@ The anomaly detection (Isolation Forest) flagged 12 stars as outliers. Some of t
 
 These might be unusual stellar types - red supergiants, white dwarfs, maybe even a Wolf-Rayet candidate. Hard to tell from just temperature and luminosity, but they're definitely not following the same rules as the others.
 
-# Why This Matters
+## Why This Matters
 
 The Stefan-Boltzmann law works well for idealized blackbodies, but real stars are more complicated. This analysis shows that:
 
@@ -40,26 +38,24 @@ The Stefan-Boltzmann law works well for idealized blackbodies, but real stars ar
 
 If I had more data (radius, maybe metallicity), the models might perform better. But even with just two variables, the patterns are there.
 
-# Interactive Dashboard
+## Interactive Dashboard
 
 I made a Plotly dashboard with a few plots:
 
-1.) HR diagram with clusters colored separately
+1. HR diagram with clusters colored separately
+2. Anomaly highlighting
+3. Deviation analysis (where stars fall relative to the model)
+4. 3D view (temperature, luminosity, and a fake distance just for visualization)
 
-2.) Anomaly highlighting
+**Live Dashboard:** https://Pratikshat22.github.io/Stellar-population-discovery/stellar_analysis_complete.html
 
-3.) Deviation analysis (where stars fall relative to the model)
+## Files
 
-4.) 3D view (temperature, luminosity, and a fake distance just for visualization)
+- `stellar_analysis_complete.html` — interactive dashboard
+- `stellar_analysis_script.py` — the actual code
+- `README.md` — this file
 
-Open `file:///C:/Users/nmee8/Downloads/INDEX.HTML` in any browser. The 3D plot rotates, hover works, etc.
-
-# Files
-
-1.) `file:///C:/Users/nmee8/Downloads/INDEX.HTML` - interactive dashboard
-2.) `analysis_script.py` - the actual code
-3.) `README.md` - this file
-
+## Running It Yourself
 
 ```bash
 pip install kagglehub plotly scikit-learn scipy
